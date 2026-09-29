@@ -8,16 +8,16 @@ import json
 
 
 class Tests:
-    def __init__(self, TIME_LIMIT: float):
-        self.results = defaultdict(lambda: SATSolverResult.UNKNOWN)
+    def __init__(self, TIME_LIMIT: float) -> None:
+        self.results: defaultdict[str, SATSolverResult] = defaultdict(lambda: SATSolverResult.UNKNOWN)
         self.RANK = 0.0
         self.TIME_LIMIT = TIME_LIMIT
         self.tests_dir = os.path.join(os.getcwd(), "tests")
 
-    def worker(self, path, event):
+    def worker(self, path: str, event: Event) -> None:
         self.results[path] = Solver(path, event).solve()
 
-    def runner(self, path):
+    def runner(self, path: str) -> float:
         event = Event()
         thread = Thread(target=self.worker, args=(path, event))
         t1 = perf_counter()
@@ -28,7 +28,7 @@ class Tests:
         delta_t = perf_counter() - t1
         return delta_t
 
-    def test_folder(self, folder: str, gold_result: SATSolverResult):
+    def test_folder(self, folder: str, gold_result: SATSolverResult) -> None:
         for entry in os.scandir(os.path.join(self.tests_dir, folder)):
             # print("Solving", entry.path)
             delta_t = self.runner(entry.path)
@@ -41,11 +41,11 @@ class Tests:
             else:
                 self.RANK += self.TIME_LIMIT
 
-    def rank_solver(self, tests):
+    def rank_solver(self, tests: list[tuple[str, SATSolverResult]]) -> None:
         for folder, gold_result in tests:
             self.test_folder(folder, gold_result)
 
-    def test_dpll(self):
+    def test_dpll(self) -> None:
         self.rank_solver([("sat-dpll", SATSolverResult.SAT), ("unsat-dpll", SATSolverResult.UNSAT)])
         MAX_SCORE = 10
         FULL_SCORE_RANK = 30.0

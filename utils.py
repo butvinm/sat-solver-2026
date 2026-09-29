@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from enum import Enum
 
 
@@ -28,26 +27,27 @@ def var(lit: int) -> int:
 
 
 class Formula:
-    __slots__ = ("num_vars", "num_lits", "clauses")
+    __slots__ = ("clauses", "num_lits", "num_vars")
 
-    def __init__(self, num_vars, clauses):
+    def __init__(self, num_vars: int, clauses: list[list[int]]):
         self.num_vars = num_vars
         self.num_lits = 2 * num_vars + 2
         self.clauses = clauses
 
 
-def load_formula(fname) -> Formula:
+def load_formula(fname: str) -> Formula:
     num_vars, raw_clauses = read_DIMACS(fname)
     clauses = [[2 * x if x > 0 else -2 * x + 1 for x in raw] for raw in raw_clauses]
     return Formula(num_vars, clauses)
 
 
-def read_DIMACS(fname):
+def read_DIMACS(fname: str) -> tuple[int, list[list[int]]]:
     with open(fname) as f:
         lines = f.read().split("\n")
 
-    variables_total = clauses_total = None
-    clauses = []
+    variables_total: int | None = None
+    clauses_total: int | None = None
+    clauses: list[list[int]] = []
     for line in lines:
         line = line.strip()
         if not line or line[0] == "c":
@@ -64,6 +64,8 @@ def read_DIMACS(fname):
             clause.pop()
         clauses.append(clause)
 
+    if variables_total is None:
+        raise ValueError(f"{fname}: missing 'p cnf' header")
     if clauses_total != len(clauses):
         print("warning: header says ", clauses_total, " but read ", len(clauses))
     return variables_total, clauses

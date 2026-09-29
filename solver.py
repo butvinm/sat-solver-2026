@@ -1,10 +1,12 @@
 import sys
 from threading import Event
-from utils import SATSolverResult, load_formula, lit_to_dimacs
+from typing import Any
+
+from utils import SATSolverResult, lit_to_dimacs, load_formula
 
 
 class Solver:
-    def __init__(self, filename: str, sigkill: Event):
+    def __init__(self, filename: str, sigkill: Event) -> None:
         self.sigkill = sigkill
         self.formula = load_formula(filename)
         self.num_vars = self.formula.num_vars
@@ -16,26 +18,26 @@ class Solver:
 
         # Трейл — означенные литералы в порядке присваивания.
         # trail[:propagated] уже распространены, trail[propagated:] — ещё нет.
-        self.trail = []
+        self.trail: list[int] = []
         self.propagated = 0
 
         # control[i] — позиция в trail решения уровня i + 1;
         # текущий уровень решения = len(control).
-        self.control = []
+        self.control: list[int] = []
 
-        self.model = None
+        self.model: list[int] | None = None
 
         self.preprocess()
 
-    def preprocess(self):
+    def preprocess(self) -> None:
         """
         Разбор дизъюнктов формулы:
           clauses          — дизъюнкты длины ≥ 2, без повторов литералов и тавтологий (a ∨ ¬a ∨ ...)
           units            — литералы единичных дизъюнктов
           has_empty_clause — во входе есть пустой дизъюнкт (формула невыполнима)
         """
-        self.clauses = []
-        self.units = []
+        self.clauses: list[list[int]] = []
+        self.units: list[int] = []
         self.has_empty_clause = False
         for clause in self.formula.clauses:
             lits = set(clause)
@@ -51,13 +53,13 @@ class Solver:
     def level(self) -> int:
         return len(self.control)
 
-    def assign(self, lit: int):
+    def assign(self, lit: int) -> None:
         """Сделать ℓ истинным на текущем уровне."""
         self.values[lit] = 1
         self.values[lit ^ 1] = -1
         self.trail.append(lit)
 
-    def decide(self, lit: int):
+    def decide(self, lit: int) -> None:
         """Открыть новый уровень решения и сделать ℓ истинным."""
         self.control.append(len(self.trail))
         self.assign(lit)
@@ -66,35 +68,40 @@ class Solver:
         """Литерал-решение уровня level (1 ≤ level ≤ self.level())."""
         return self.trail[self.control[level - 1]]
 
-    def backtrack(self, level: int):
+    def backtrack(self, level: int) -> None:
         """Отменить все присваивания уровней > level."""
         if level >= len(self.control):
             return
+
         values, trail = self.values, self.trail
         start = self.control[level]
         for i in range(start, len(trail)):
             lit = trail[i]
             values[lit] = 0
             values[lit ^ 1] = 0
+
         del trail[start:]
         del self.control[level:]
         self.propagated = start
 
-    def save_model(self):
+    def save_model(self) -> None:
         values = self.values
-        self.model = [lit_to_dimacs(2 * v if values[2 * v] > 0 else 2 * v + 1)
-                      for v in range(1, self.num_vars + 1)]
+        self.model = [
+            lit_to_dimacs(2 * v if values[2 * v] > 0 else 2 * v + 1)
+            for v in range(1, self.num_vars + 1)
+        ]
 
-    def build_occurrences(self):
-        self.occurrences = [[] for _ in range(self.formula.num_lits)]
+    def build_occurrences(self) -> None:
+        self.occurrences: list[list[list[int]]] = [[] for _ in range(self.formula.num_lits)]
         for c in self.clauses:
             for lit in c:
                 self.occurrences[lit].append(c)
 
-    def build_watches(self):
+    def build_watches(self) -> None:
         num_lits = self.formula.num_lits
-        self.binary = [[] for _ in range(num_lits)]
-        self.watches = [[] for _ in range(num_lits)]
+        self.binary: list[list[int]] = [[] for _ in range(num_lits)]
+        # Элемент watches[ℓ] - пара [блокер, дизъюнкт]; список, а не кортеж, чтобы блокер можно было заменить.
+        self.watches: list[list[list[Any]]] = [[] for _ in range(num_lits)]
         for c in self.clauses:
             if len(c) == 2:
                 self.binary[c[0]].append(c[1])
@@ -108,9 +115,10 @@ class Solver:
         UnitPropagate: распространить литералы trail[propagated:].
         Возвращает True, если найден конфликт (все литералы дизъюнкта ложны).
         """
-        raise NotImplementedError()
+        # for unit in self.units:
+        #     unit
 
-    def choose_literal(self):
+    def choose_literal(self) -> int | None:
         """
         ChooseLiteral: литерал для следующего решения или None, если все
         переменные означены.
