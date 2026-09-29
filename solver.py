@@ -153,7 +153,13 @@ class Solver:
         ChooseLiteral: литерал для следующего решения или None, если все
         переменные означены.
         """
-        raise NotImplementedError()
+        values = self.values
+        for l in range(2, len(values), 2):
+            v = values[l]
+            if v == 0:
+                return l
+
+        return None
 
     def solve(self) -> SATSolverResult:
         if self.sigkill.is_set():  # TODO: your code should check this predicate frequently! If it is set, you should return
