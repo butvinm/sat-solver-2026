@@ -163,9 +163,37 @@ class Solver:
         return None
 
     def solve(self) -> SATSolverResult:
-        if self.sigkill.is_set():  # TODO: your code should check this predicate frequently! If it is set, you should return
-            return SATSolverResult.UNKNOWN
-        raise NotImplementedError()
+        if self.has_empty_clause:
+            return SATSolverResult.UNSAT
+
+        values = self.values
+        for u in self.units:
+            v = values[u]
+            if v == 0:
+                self.assign(u)
+            elif v == 1:
+                continue
+            else:
+                return SATSolverResult.UNSAT
+
+        while not self.sigkill.is_set():
+            L = self.level()
+            if self.propagate():
+                if L == 0:
+                    return SATSolverResult.UNSAT
+
+                l = self.decision(L)
+                self.backtrack(L - 1)
+                self.assign(l ^ 1)
+            else:
+                l = self.choose_literal()
+                if l is None:
+                    self.save_model()
+                    return SATSolverResult.SAT
+
+                self.decide(l)
+
+        return SATSolverResult.UNKNOWN
 
 
 if __name__ == "__main__":
