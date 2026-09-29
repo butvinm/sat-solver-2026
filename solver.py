@@ -28,6 +28,7 @@ class Solver:
         self.model: list[int] | None = None
 
         self.preprocess()
+        self.build_occurrences()
 
     def preprocess(self) -> None:
         """
@@ -92,7 +93,9 @@ class Solver:
         ]
 
     def build_occurrences(self) -> None:
-        self.occurrences: list[list[list[int]]] = [[] for _ in range(self.formula.num_lits)]
+        self.occurrences: list[list[list[int]]] = [
+            [] for _ in range(self.formula.num_lits)
+        ]
         for c in self.clauses:
             for lit in c:
                 self.occurrences[lit].append(c)
@@ -115,8 +118,35 @@ class Solver:
         UnitPropagate: распространить литералы trail[propagated:].
         Возвращает True, если найден конфликт (все литералы дизъюнкта ложны).
         """
-        # for unit in self.units:
-        #     unit
+        while self.propagated < len(self.trail):
+            l = self.trail[self.propagated]
+            # todo: local vars faster, values = self.values и trail = self.trail
+            for clause in self.occurrences[l ^ 1]:
+                has_true = False
+                first_unassigned: int | None = None
+                has_second_unassigned = False
+                for k in clause:
+                    v = self.values[k]
+                    if v == 1:
+                        has_true = True
+                        break  # если есть хоть один истинный, весь клоз выполнен - пропускам
+                    elif v == 0:
+                        if first_unassigned is None:
+                            first_unassigned = k
+                        else:
+                            has_second_unassigned = True
+                            break
+
+                if has_true or has_second_unassigned:
+                    continue
+                elif first_unassigned is not None:
+                    self.assign(first_unassigned)
+                else:
+                    return True
+
+            self.propagated += 1
+
+        return False
 
     def choose_literal(self) -> int | None:
         """
