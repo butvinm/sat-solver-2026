@@ -118,15 +118,16 @@ class Solver:
         UnitPropagate: распространить литералы trail[propagated:].
         Возвращает True, если найден конфликт (все литералы дизъюнкта ложны).
         """
+        values = self.values
+        trail = self.trail
         while self.propagated < len(self.trail):
-            l = self.trail[self.propagated]
-            # todo: local vars faster, values = self.values и trail = self.trail
+            l = trail[self.propagated]
             for clause in self.occurrences[l ^ 1]:
                 has_true = False
                 first_unassigned: int | None = None
                 has_second_unassigned = False
                 for k in clause:
-                    v = self.values[k]
+                    v = values[k]
                     if v == 1:
                         has_true = True
                         break  # если есть хоть один истинный, весь клоз выполнен - пропускам
